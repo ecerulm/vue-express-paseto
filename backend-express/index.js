@@ -55,7 +55,7 @@ async function resetDb(conn) {
   };
   app.use(cors(corsOptions));
 
-  // required JSON and X-Requested-By (force CORS in the browser)
+  // required JSON and X-Requested-With (force CORS in the browser)
   app.use((req, res, next) => {
     if (req.is('json') && req.get('x-requested-with')) {
       return next();
