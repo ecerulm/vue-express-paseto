@@ -11,6 +11,15 @@ const jose = require('jose');
 
 require('dotenv').config();
 
+function getPasetoFooter(token) {
+  try {
+    const footer = JSON.parse(Buffer.from(token.split('.').pop(), 'base64url'));
+    return footer;
+  } catch (err) {
+    return undefined
+  }
+}
+
 
 async function resetDb(conn) {
   const User = conn.model('User');
@@ -39,6 +48,13 @@ async function resetDb(conn) {
   publicJwk.kid = await jose.calculateJwkThumbprint(publicJwk, 'sha256');
   logger.info("Public JWK %s", publicJwk);
 
+  const keys = {
+    [publicJwk.kid]: {
+      publicKey: publicKey,
+      privateKey: secretKey,
+    }
+  }
+
   const serverPort = 3000;
   const app = express();
 
@@ -57,9 +73,11 @@ async function resetDb(conn) {
 
   // required JSON and X-Requested-With (force CORS in the browser)
   app.use((req, res, next) => {
-    if (req.is('json') && req.get('x-requested-with')) {
+    if (req.is('json') !== false && req.get('x-requested-with')) {
       return next();
     } else {
+      logger.info("json %s", req.is('json'));
+      logger.info("x-requested-with %s", req.get('x-requested-with'));
       res.status(401).json({message: "content-type must be application/json and X-Requested-By header must be present"});
     }
   });
@@ -86,15 +104,17 @@ async function resetDb(conn) {
       return;
     }
     
-    //TODO generate a PASETO token
     // https://github.com/panva/paseto/blob/main/docs/README.md#v4signpayload-key-options
-
     const jti = crypto.randomUUID();
+    logger.info("Generate token for sub = %s", user.username);
     const token = await V4.sign({}, secretKey, {
-      sub: user.username,
+      subject: user.username,
       audience: appId,
       issuer: appId,
       kid: publicJwk.kid,
+      footer:  {
+        kid: publicJwk.kid,
+      },
       jti,
     }) // options is {} 
 
@@ -104,14 +124,47 @@ async function resetDb(conn) {
     });
   });
 
-  //TODO: reject non JSON requests
-  //TODO: request if X-Requested-By not present
 
   // Middleware that adds req.username from PASETO token if present in Authentication: Bearer header
-  app.use((req,res,next) => {
+  app.use(async (req,res,next) => {
+    const authHeader = req.get('authentication')
+    if (!authHeader) return next();
+    const bearer = 'Bearer '
+    if (!authHeader.startsWith(bearer)) return next();
+    const token = authHeader.substring(bearer.length)
+    logger.info("token is '%s'", token)
+    
+    
+    const footer = getPasetoFooter(token);
+    const kid = footer?.kid
+    const pK = keys[kid]?.publicKey
+    if (!pK) {
+      logger.info("Can't find %s in keys", kid)
+      return next();
+    }
 
+    const verifyResult = await V4.verify(token, pK, {
+      audience: appId, // expected aud
+      issuer: appId, //expected issuer
+    })
 
+    logger.info("verifyResult %s", verifyResult);
+    if (verifyResult.kid !== kid) {
+      logger.info("Invalid token the kid in claims does not match kid in footer")
+      return next();
+    }
+
+    req.username = verifyResult.sub;
+    logger.info("req.username = %s", req.username);
+    return next();
   });
+
+  app.get('/api/userinfo',(req,res, next) => {
+    res.json({
+      username: req.username,
+      loggedInStatus: Boolean(req.username),
+    });
+  })
 
   app.listen(serverPort, () => {
     logger.info("Listening on port %s", serverPort);
