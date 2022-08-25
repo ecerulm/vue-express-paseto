@@ -160,15 +160,47 @@ async function resetDb(conn) {
     return next();
   });
 
-  app.get('/api/userinfo',(req,res, next) => {
+  app.get("/api/userinfo", (req, res, next) => {
     res.json({
       username: req.username,
       loggedInStatus: Boolean(req.username),
     });
-  })
+  });
+
+  // TODO: the API calls that require authentication
+  //
+  const securedApi = express.Router();
+
+  securedApi.use(async (req, res, next) => {
+    if (!req.username) {
+      return res
+        .status(403)
+        .json({ message: "you need be loggedin to access this endpoint" });
+    }
+
+    const user = await User.findOne({ username: req.username });
+    if (!user) {
+      logger.error("Can't find the username %s in DB");
+      return res.status(500).json({ message: "" });
+    }
+    req.user = user;
+    return next();
+  });
+
+  securedApi.get("/getcounter", async (req, res, next) => {
+    res.json({ counter: req.user.counter });
+  });
+
+  securedApi.post("/increasecounter", async (req, res, next) => {
+    req.user.counter += 1;
+    const result = await req.user.save();
+
+    res.json({ counter: result.counter });
+  });
+
+  app.use("/api/secured/", securedApi); //
 
   app.listen(serverPort, () => {
     logger.info("Listening on port %s", serverPort);
-  })
+  });
 })();
-
