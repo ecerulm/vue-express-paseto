@@ -1,7 +1,9 @@
-<script setup></script>
+<script setup>
+import NavBar from "@/components/NavBar.vue";
+</script>
 
 <template>
-test
+  <NavBar></NavBar>
 </template>
 
 <style scoped></style>
