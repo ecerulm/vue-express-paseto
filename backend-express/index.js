@@ -65,7 +65,7 @@ async function resetDb(conn) {
   app.use(bodyParser.json());
 
   const corsOptions = {
-    origin: `http://localhost:${serverPort}`,
+    origin: "http://localhost:5173",
   };
   app.use(cors(corsOptions));
 
@@ -127,7 +127,8 @@ async function resetDb(conn) {
 
   // Middleware that adds req.username from PASETO token if present in Authentication: Bearer header
   app.use(async (req, res, next) => {
-    const authHeader = req.get("authentication");
+    const authHeader = req.get("authorization");
+    logger.info("authHeader %s", authHeader);
     if (!authHeader) return next();
     const bearer = "Bearer ";
     if (!authHeader.startsWith(bearer)) return next();
