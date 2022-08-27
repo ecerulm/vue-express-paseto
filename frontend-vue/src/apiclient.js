@@ -2,7 +2,7 @@ import { ref, watch } from "vue";
 import { flashes } from "@/flashes.js";
 import router from "@/routes.js";
 
-export const isLoggedIn = ref(false);
+export const isLoggedIn = ref(null);
 export const username = ref(null);
 
 watch(isLoggedIn, async (currentlyLoggedIn, oldValue) => {
