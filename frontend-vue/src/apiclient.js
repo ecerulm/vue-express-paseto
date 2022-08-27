@@ -1,4 +1,5 @@
 import { ref, watch } from "vue";
+import { flashes } from "@/flashes.js";
 
 export const isLoggedIn = ref(false);
 
@@ -40,6 +41,10 @@ export function login(username, password) {
     .then((res) => res.json())
     .then((body) => {
       {
+        if (!body.token) {
+          flashes.push(`Login failed ${body.message}`);
+          console.log("flashes", flashes);
+        }
         console.log("login response", body);
         localStorage.setItem("authToken", body.token);
         updateLoggedInStatus();
