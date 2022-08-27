@@ -1,5 +1,6 @@
 <script setup>
 import { flashes, removeFlash } from "@/flashes.js";
+import { isLoggedIn, logout } from "@/apiclient.js";
 </script>
 <template>
   <div
@@ -20,11 +21,20 @@ import { flashes, removeFlash } from "@/flashes.js";
     <div class="container-fluid">
       <a class="navbar-brand" href="#">Navbar</a>
       <button
+        v-if="!isLoggedIn"
         type="button"
         class="btn btn-outline-primary"
         @click="$router.push('/login')"
       >
         Login
+      </button>
+      <button
+        v-else
+        type="button"
+        class="btn btn-outline-primary"
+        @click="logout()"
+      >
+        Logout
       </button>
     </div>
   </nav>

@@ -1,7 +1,17 @@
 import { ref, watch } from "vue";
 import { flashes } from "@/flashes.js";
+import router from "@/routes.js";
 
 export const isLoggedIn = ref(false);
+export const username = ref(null);
+
+watch(isLoggedIn, async (currentlyLoggedIn, oldValue) => {
+  if (currentlyLoggedIn) {
+    router.push("/");
+  } else {
+    router.push("/notloggedin");
+  }
+});
 
 export function updateLoggedInStatus() {
   const authToken = localStorage.getItem("authToken");
@@ -20,6 +30,7 @@ export function updateLoggedInStatus() {
     .then((body) => {
       console.log("userinfo response", body);
       isLoggedIn.value = Boolean(body.loggedInStatus);
+      username.value = body.username;
     })
     .catch((err) => {
       isLoggedIn.value = Boolean(false);
@@ -54,4 +65,9 @@ export function login(username, password) {
       console.log("login error", err);
       updateLoggedInStatus();
     });
+}
+
+export function logout() {
+  localStorage.removeItem("authToken");
+  isLoggedIn.value = false;
 }
