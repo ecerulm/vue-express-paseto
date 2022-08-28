@@ -10,6 +10,12 @@ const jose = require("jose");
 
 require("dotenv").config();
 
+// endpoints
+// * POST /api/login
+// * GET /user/info
+// * GET /api/secured/getcounter
+// * POST /api/secured/increasecounter
+
 function getPasetoFooter(token) {
   try {
     const footer = JSON.parse(Buffer.from(token.split(".").pop(), "base64url"));
